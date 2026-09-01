@@ -6,9 +6,9 @@ Projet complet de gestion de bibliothèque avec **architecture hexagonale strict
 
 ### Les 3 Opérations Principales
 
-1. **➕ Créer un livre** - Ajouter un nouveau livre à la bibliothèque
-2. **📖 Afficher les livres avec leurs statuts** - Lister tous les livres (disponible/emprunté)
-3. **🎫 Emprunter un livre** - Marquer un livre comme emprunté par un utilisateur
+1. ** Créer un livre** - Ajouter un nouveau livre à la bibliothèque
+2. ** Afficher les livres avec leurs statuts** - Lister tous les livres (disponible/emprunté)
+3. ** Emprunter un livre** - Marquer un livre comme emprunté par un utilisateur
 
 ---
 
@@ -49,10 +49,10 @@ back/
 
 ### Principes Appliqués
 
-✅ **Séparation des concerns** - Chaque couche a une responsabilité unique
-✅ **Dépendance inversée** - Domain dépend de personne, interfaces dépendent de application/domain
-✅ **Testabilité** - Use cases injectables, repository mockable
-✅ **Extensibilité** - Repository in-memory peut être remplacé par PostgreSQL/MongoDB
+- **Séparation des concerns** - Chaque couche a une responsabilité unique
+- **Dépendance inversée** - Domain dépend de personne, interfaces dépendent de application/domain
+- **Testabilité** - Use cases injectables, repository mockable
+- **Extensibilité** - Repository in-memory peut être remplacé par PostgreSQL/MongoDB
 
 ---
 
@@ -93,7 +93,7 @@ front/biblio/
 http://localhost:8002/api
 ```
 
-### 1️⃣ Créer un Livre
+### 1️ Créer un Livre
 ```bash
 POST /api/books
 Content-Type: application/json
@@ -116,7 +116,7 @@ Content-Type: application/json
 }
 ```
 
-### 2️⃣ Afficher les Livres
+### 2️ Afficher les Livres
 ```bash
 GET /api/books
 
@@ -138,7 +138,7 @@ GET /api/books
 ]
 ```
 
-### 3️⃣ Emprunter un Livre
+### 3️ Emprunter un Livre
 ```bash
 POST /api/books/{book_id}/borrow
 Content-Type: application/json
