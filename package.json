@@ -1,0 +1,11 @@
+{
+  "name": "biblio-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "npm run dev --prefix front/biblio",
+    "build": "npm run build --prefix front/biblio",
+    "start": "npm run start --prefix front/biblio",
+    "lint": "npm run lint --prefix front/biblio"
+  }
+}

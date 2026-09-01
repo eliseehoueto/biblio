@@ -1,0 +1,11 @@
+{
+  "name": "biblio-front-wrapper",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "npm run dev --prefix biblio",
+    "build": "npm run build --prefix biblio",
+    "start": "npm run start --prefix biblio",
+    "lint": "npm run lint --prefix biblio"
+  }
+}
