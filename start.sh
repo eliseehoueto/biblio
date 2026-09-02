@@ -26,7 +26,7 @@ echo -e "${GREEN}✓ Backend en cours de démarrage (PID: $BACKEND_PID)${RESET}"
 sleep 2
 
 # Frontend
-echo -e "\n${YELLOW}🎨 Démarrage Frontend (Next.js)...${RESET}"
+echo -e "\n${YELLOW}🔧 Démarrage Frontend (Next.js)...${RESET}"
 cd ../front/biblio
 npm install -q 2>/dev/null || true
 npm run dev &
@@ -34,10 +34,10 @@ FRONTEND_PID=$!
 echo -e "${GREEN}✓ Frontend en cours de démarrage (PID: $FRONTEND_PID)${RESET}"
 
 echo -e "\n${BLUE}========================================="
-echo -e "✅ ${GREEN}Système démarré avec succès!${RESET}"
+echo -e "${GREEN}Système démarré avec succès!${RESET}"
 echo -e "${BLUE}=========================================${RESET}\n"
 
-echo -e "📍 Endpoints:"
+echo -e "Endpoints:"
 echo -e "   Backend:  ${YELLOW}http://localhost:8002${RESET}"
 echo -e "   Frontend: ${YELLOW}http://localhost:3000${RESET}"
 echo -e "\n📝 Pour arrêter: ${YELLOW}Ctrl+C${RESET}\n"
