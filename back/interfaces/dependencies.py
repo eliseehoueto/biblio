@@ -2,8 +2,11 @@ from application.use_cases import (
     BorrowBookUseCase,
     CreateBookUseCase,
     ListBooksUseCase,
+    ListArchivedBooksUseCase,
     ReturnBookUseCase,
-    DeleteBookUseCase,
+    ArchiveBookUseCase,
+    DestroyBookUseCase,
+    RestoreBookUseCase,
 )
 
 from infrastructure.models import BookModel
@@ -29,6 +32,11 @@ def get_list_books_use_case(
 ):
     return ListBooksUseCase(repo)
 
+def get_list_archived_books_use_case(
+    repo: PostgreSQLBookRepository = Depends(get_book_repository)
+):
+    return ListArchivedBooksUseCase(repo)
+
 def get_borrow_book_use_case(
     repo: PostgreSQLBookRepository = Depends(get_book_repository)
 ):
@@ -39,7 +47,17 @@ def get_return_book_use_case(
 ):
     return ReturnBookUseCase(repo)
 
-def get_delete_book_use_case(
+def get_archive_book_use_case(
     repo: PostgreSQLBookRepository = Depends(get_book_repository)
 ):
-    return DeleteBookUseCase(repo)
+    return ArchiveBookUseCase(repo)
+
+def get_destroy_book_use_case(
+    repo: PostgreSQLBookRepository = Depends(get_book_repository)
+):
+    return DestroyBookUseCase(repo)
+
+def get_restore_book_use_case(
+    repo: PostgreSQLBookRepository = Depends(get_book_repository)
+):
+    return RestoreBookUseCase(repo)

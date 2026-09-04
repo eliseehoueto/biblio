@@ -2,7 +2,7 @@
 from uuid import UUID
 
 from application.dtos import BookDTO, BorrowBookRequestInternal, CreateBookRequest
-from domain.entities import Book
+from domain.entities.Book import Book
 from domain.ports import BookRepository
 
 
@@ -15,7 +15,7 @@ class CreateBookUseCase:
     def execute(self, request: CreateBookRequest) -> BookDTO:
         """
         Create a new book in the library.
-        
+
         Args:
             request: CreateBookRequest with title, author, isbn
             
@@ -50,7 +50,8 @@ class CreateBookUseCase:
             isbn=book.isbn,
             status=book.status.value,
             borrowed_by=book.borrowed_by,
-            borrow_date=book.borrow_date.isoformat() if book.borrow_date else None
+            borrow_date=book.borrow_date.isoformat() if book.borrow_date else None,
+            archived_at=book.archived_at,
         )
 
 
@@ -63,7 +64,7 @@ class ListBooksUseCase:
     def execute(self) -> list[BookDTO]:
         """
         Get all books in the library with their current status.
-        
+
         Returns:
             List of BookDTO objects
         """
@@ -79,8 +80,22 @@ class ListBooksUseCase:
             isbn=book.isbn,
             status=book.status.value,
             borrowed_by=book.borrowed_by,
-            borrow_date=book.borrow_date.isoformat() if book.borrow_date else None
+            borrow_date=book.borrow_date.isoformat() if book.borrow_date else None,
+            archived_at=book.archived_at,
         )
+
+
+class ListArchivedBooksUseCase:
+    """Use case: list archived books for administration."""
+
+    def __init__(self, book_repository: BookRepository):
+        self.book_repository = book_repository
+
+    def execute(self) -> list[BookDTO]:
+        return [
+            ListBooksUseCase._to_dto(book)
+            for book in self.book_repository.find_archived()
+        ]
 
 
 class BorrowBookUseCase:
@@ -95,7 +110,7 @@ class BorrowBookUseCase:
         
         Args:
             request: BorrowBookRequestInternal with book_id and borrower_name
-            
+
         Returns:
             BookDTO with updated book status
             
@@ -130,7 +145,8 @@ class BorrowBookUseCase:
             isbn=book.isbn,
             status=book.status.value,
             borrowed_by=book.borrowed_by,
-            borrow_date=book.borrow_date.isoformat() if book.borrow_date else None
+            borrow_date=book.borrow_date.isoformat() if book.borrow_date else None,
+            archived_at=book.archived_at,
         )
 
 
@@ -173,25 +189,53 @@ class ReturnBookUseCase:
             isbn=book.isbn,
             status=book.status.value,
             borrowed_by=book.borrowed_by,
-            borrow_date=book.borrow_date.isoformat() if book.borrow_date else None
+            borrow_date=book.borrow_date.isoformat() if book.borrow_date else None,
+            archived_at=book.archived_at,
         )
 
 
-class DeleteBookUseCase:
-    """Use case: Delete a book from the library."""
+class ArchiveBookUseCase:
+    """Use case: Archive a book from the library."""
 
     def __init__(self, book_repository: BookRepository):
         self.book_repository = book_repository
 
     def execute(self, book_id: UUID) -> bool:
         """
-        Delete a book by ID.
+        Archive a book by ID.
+
+        Args:
+            book_id: UUID of the book to archive
+
+        Returns:
+            True if archived
+
+        Raises:
+            ValueError: If book not found
+        """
+        success = self.book_repository.archive(book_id)
+        if not success:
+            raise ValueError(f"Book with ID {book_id} not found")
+        return True
+
+
+class DestroyBookUseCase:
+    """Use case: Permanently destroy a book from the library."""
+
+    def __init__(self, book_repository:BookRepository):
+        self.book_repository= book_repository
+
+
+    def execute(self,book_id:UUID) -> bool:
+
+        """
+        Permanently destroy a book by ID.
         
         Args:
-            book_id: UUID of the book to delete
+            book_id: UUID of the book to destroy
             
         Returns:
-            True if deleted
+            True if destroyed
             
         Raises:
             ValueError: If book not found
@@ -201,3 +245,14 @@ class DeleteBookUseCase:
             raise ValueError(f"Book with ID {book_id} not found")
         return True
 
+
+class RestoreBookUseCase:
+    """Use case: restore an archived book."""
+
+    def __init__(self, book_repository: BookRepository):
+        self.book_repository = book_repository
+
+    def execute(self, book_id: UUID) -> bool:
+        if not self.book_repository.restore(book_id):
+            raise ValueError(f"Archived book with ID {book_id} not found")
+        return True

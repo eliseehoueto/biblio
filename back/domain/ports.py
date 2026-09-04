@@ -2,7 +2,7 @@
 from abc import ABC, abstractmethod
 from uuid import UUID
 
-from domain.entities import Book
+from domain.entities.Book import Book
 
 
 class BookRepository(ABC):
@@ -24,6 +24,11 @@ class BookRepository(ABC):
         pass
 
     @abstractmethod
+    def find_archived(self) -> list[Book]:
+        """Retrieve archived books."""
+        pass
+
+    @abstractmethod
     def find_by_isbn(self, isbn: str) -> Book | None:
         """Find a book by its ISBN."""
         pass
@@ -36,4 +41,14 @@ class BookRepository(ABC):
     @abstractmethod
     def delete(self, book_id: UUID) -> bool:
         """Delete a book by its ID."""
+        pass
+
+    @abstractmethod
+    def archive(self, book_id: UUID) -> bool:
+        """Archive a book by its ID."""
+        pass
+
+    @abstractmethod
+    def restore(self, book_id: UUID) -> bool:
+        """Restore an archived book by its ID."""
         pass

@@ -1,6 +1,6 @@
 """Database configuration and connection management."""
 import os
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 from dotenv import load_dotenv
 
@@ -22,9 +22,17 @@ engine = create_engine(
 
 # Session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
+ 
 # Base class for models
 Base = declarative_base()
+
+
+def ensure_archive_column() -> None:
+    """Add the archive column when upgrading an existing database."""
+    with engine.begin() as connection:
+        connection.execute(text(
+            "ALTER TABLE books ADD COLUMN IF NOT EXISTS archived_at TIMESTAMP NULL"
+        ))
 
 
 def get_db():

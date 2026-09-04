@@ -1,17 +1,19 @@
 """FastAPI application setup and configuration."""
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from infrastructure.models import BookModel
 
 from interfaces.dependencies import (
     get_book_repository,
     get_create_book_use_case,
     get_list_books_use_case,
+    get_list_archived_books_use_case,
     get_borrow_book_use_case,
     get_return_book_use_case,
-    get_delete_book_use_case
+    get_archive_book_use_case,
+    get_destroy_book_use_case,
+    get_restore_book_use_case,
 )
-from infrastructure.database import engine, Base, get_db
+from infrastructure.database import engine, Base, ensure_archive_column
 
 from interfaces.routes import create_book_router
 
@@ -35,6 +37,7 @@ def create_app() -> FastAPI:
 
     # Create tables in database
     Base.metadata.create_all(bind=engine)
+    ensure_archive_column()
 
    
 
@@ -43,9 +46,12 @@ def create_app() -> FastAPI:
         create_book_router(
             get_create_book_use_case,
             get_list_books_use_case,
+            get_list_archived_books_use_case,
             get_borrow_book_use_case,
             get_return_book_use_case,
-            get_delete_book_use_case
+            get_archive_book_use_case,
+            get_destroy_book_use_case,
+            get_restore_book_use_case,
         )
     )
 

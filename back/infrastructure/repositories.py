@@ -1,8 +1,9 @@
 """Adapter implementations of BookRepository."""
+from datetime import datetime
 from uuid import UUID
 from sqlalchemy.orm import Session
 
-from domain.entities import Book
+from domain.entities.Book import Book
 from domain.ports import BookRepository
 from infrastructure.models import BookModel
 
@@ -20,11 +21,15 @@ class InMemoryBookRepository(BookRepository):
 
     def find_by_id(self, book_id: UUID) -> Book | None:
         """Find a book by ID."""
-        return self._books.get(book_id)
+        book = self._books.get(book_id)
+        return book if book and not book.is_deleted() else None
 
     def find_all(self) -> list[Book]:
         """Get all books."""
-        return list(self._books.values())
+        return [book for book in self._books.values() if not book.is_deleted()]
+
+    def find_archived(self) -> list[Book]:
+        return [book for book in self._books.values() if book.is_deleted()]
 
     def find_by_isbn(self, isbn: str) -> Book | None:
         """Find a book by ISBN."""
@@ -47,6 +52,20 @@ class InMemoryBookRepository(BookRepository):
             return True
         return False
 
+    def archive(self, book_id: UUID) -> bool:
+        book = self._books.get(book_id)
+        if not book:
+            return False
+        book.archive()
+        return True
+
+    def restore(self, book_id: UUID) -> bool:
+        book = self._books.get(book_id)
+        if not book:
+            return False
+        book.restore()
+        return True
+
 
 class PostgreSQLBookRepository(BookRepository):
     """Adapter: PostgreSQL implementation of BookRepository."""
@@ -65,7 +84,8 @@ class PostgreSQLBookRepository(BookRepository):
     def find_by_id(self, book_id: UUID) -> Book | None:
         """Find a book by ID."""
         db_book = self.db.query(BookModel).filter(
-            BookModel.id == book_id
+            BookModel.id == book_id,
+            BookModel.archived_at.is_(None),
         ).first()
         if db_book:
             return db_book.to_domain()
@@ -73,7 +93,15 @@ class PostgreSQLBookRepository(BookRepository):
 
     def find_all(self) -> list[Book]:
         """Get all books."""
-        db_books = self.db.query(BookModel).all()
+        db_books = self.db.query(BookModel).filter(
+            BookModel.archived_at.is_(None)
+        ).all()
+        return [db_book.to_domain() for db_book in db_books]
+
+    def find_archived(self) -> list[Book]:
+        db_books = self.db.query(BookModel).filter(
+            BookModel.archived_at.is_not(None)
+        ).all()
         return [db_book.to_domain() for db_book in db_books]
 
     def find_by_isbn(self, isbn: str) -> Book | None:
@@ -117,4 +145,26 @@ class PostgreSQLBookRepository(BookRepository):
             self.db.commit()
             return True
         return False
+
+    def archive(self, book_id: UUID) -> bool:
+        db_book = self.db.query(BookModel).filter(
+            BookModel.id == book_id,
+            BookModel.archived_at.is_(None),
+        ).first()
+        if not db_book:
+            return False
+        db_book.archived_at = datetime.now()
+        self.db.commit()
+        return True
+
+    def restore(self, book_id: UUID) -> bool:
+        db_book = self.db.query(BookModel).filter(
+            BookModel.id == book_id,
+            BookModel.archived_at.is_not(None),
+        ).first()
+        if not db_book:
+            return False
+        db_book.archived_at = None
+        self.db.commit()
+        return True
 

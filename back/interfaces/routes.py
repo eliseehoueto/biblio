@@ -8,18 +8,28 @@ from application.dtos import BookDTO, BorrowBookRequest, BorrowBookRequestIntern
 from application.use_cases import (
     BorrowBookUseCase,
     CreateBookUseCase,
+    DestroyBookUseCase,
     ListBooksUseCase,
+    ListArchivedBooksUseCase,
     ReturnBookUseCase,
-    DeleteBookUseCase,
+    ArchiveBookUseCase,
+    RestoreBookUseCase,
+)
+from interfaces.dependencies import (
+    get_destroy_book_use_case,
+    get_restore_book_use_case,
 )
 
 
 def create_book_router(
     get_create_book_use_case: Callable[..., CreateBookUseCase],
     get_list_books_use_case: Callable[..., ListBooksUseCase],
+    get_list_archived_books_use_case: Callable[..., ListArchivedBooksUseCase],
     get_borrow_book_use_case: Callable[..., BorrowBookUseCase],
     get_return_book_use_case: Callable[..., ReturnBookUseCase],
-    get_delete_book_use_case: Callable[..., DeleteBookUseCase],
+    get_archive_book_use_case: Callable[..., ArchiveBookUseCase],
+    get_destroy_book_use_case: Callable[..., DestroyBookUseCase],
+    get_restore_book_use_case: Callable[..., RestoreBookUseCase],
 ) -> APIRouter:
     """
     Create router with book endpoints.
@@ -63,6 +73,16 @@ def create_book_router(
         
         **Operation 2: Afficher les livres avec leurs statuts**
         """
+        return use_case.execute()
+
+    @router.get(
+        "/archived",
+        response_model=list[BookDTO],
+        summary="List archived books"
+    )
+    def list_archived_books(
+        use_case: ListArchivedBooksUseCase = Depends(get_list_archived_books_use_case),
+    ) -> list[BookDTO]:
         return use_case.execute()
 
     @router.post(
@@ -121,14 +141,48 @@ def create_book_router(
     @router.delete(
         "/{book_id}",
         status_code=status.HTTP_204_NO_CONTENT,
-        summary="Delete a book"
+        summary="Archive a book"
     )
-    def delete_book(
+    def archive_book(
         book_id: UUID,
-        use_case: DeleteBookUseCase = Depends(get_delete_book_use_case),
+        use_case: ArchiveBookUseCase = Depends(get_archive_book_use_case),
     ) -> None:
         """
-        Delete a book from the library.
+        Archive a book from the library.
+        """
+        try:
+            use_case.execute(book_id)
+        except ValueError as e:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=str(e)
+            )
+
+    @router.post(
+        "/{book_id}/restore",
+        status_code=status.HTTP_204_NO_CONTENT,
+        summary="Restore an archived book"
+    )
+    def restore_book(
+        book_id: UUID,
+        use_case: RestoreBookUseCase = Depends(get_restore_book_use_case),
+    ) -> None:
+        try:
+            use_case.execute(book_id)
+        except ValueError as e:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+    @router.delete(
+        "/{book_id}/destroy",
+        status_code=status.HTTP_204_NO_CONTENT,
+        summary="Destroy a book"
+    )
+    def destroy_book(
+        book_id: UUID,
+        use_case: DestroyBookUseCase = Depends(get_destroy_book_use_case),
+    ) -> None:
+        """
+        Permanently destroy a book from the library.
         """
         try:
             use_case.execute(book_id)

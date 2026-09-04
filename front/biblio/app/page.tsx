@@ -20,6 +20,7 @@ import {
 
 export default function Home() {
   const [books, setBooks] = useState<Book[]>([]);
+  const [archivedBooks, setArchivedBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
   const [submittingCreate, setSubmittingCreate] = useState(false);
   const [submittingBorrow, setSubmittingBorrow] = useState(false);
@@ -33,6 +34,7 @@ export default function Home() {
   // Search & Filter
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "available" | "borrowed">("all");
+  const [catalogueView, setCatalogueView] = useState<"active" | "archived">("active");
 
   // Form states
   const [createForm, setCreateForm] = useState({
@@ -54,15 +56,17 @@ export default function Home() {
     }
   }, [notification]);
 
-  useEffect(() => {
-    loadBooks();
-  }, []);
-
   const loadBooks = async () => {
     setLoading(true);
     try {
-      const data = await libraryApi.listBooks();
-      setBooks(data);
+      const activeBooks = await libraryApi.listBooks();
+      setBooks(activeBooks);
+
+      try {
+        setArchivedBooks(await libraryApi.listArchivedBooks());
+      } catch {
+        setArchivedBooks([]);
+      }
     } catch (err) {
       setNotification({
         type: "error",
@@ -72,6 +76,10 @@ export default function Home() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    void loadBooks();
+  }, []);
 
   // Operation 1: Create a book
   const handleCreateBook = async (e: React.FormEvent) => {
@@ -163,20 +171,54 @@ export default function Home() {
 
   // Operation 5: Delete a book
   const handleDeleteBook = async (bookId: string, title: string) => {
-    if (!confirm(`Confirmer la suppression définitive du livre "${title}" ?`)) return;
+    if (!confirm(`Archiver le livre "${title}" ?`)) return;
 
     setActionLoadingId(bookId);
     try {
       await libraryApi.deleteBook(bookId);
       setNotification({
         type: "success",
-        message: `Le livre "${title}" a été supprimé du catalogue.`,
+        message: `Le livre "${title}" a été archivé.`,
       });
       await loadBooks();
     } catch (err) {
       setNotification({
         type: "error",
         message: err instanceof Error ? err.message : "Erreur lors de la suppression.",
+      });
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const handleRestoreBook = async (bookId: string, title: string) => {
+    setActionLoadingId(bookId);
+    try {
+      await libraryApi.restoreBook(bookId);
+      setNotification({ type: "success", message: `Le livre "${title}" a été restauré.` });
+      await loadBooks();
+    } catch (err) {
+      setNotification({
+        type: "error",
+        message: err instanceof Error ? err.message : "Erreur lors de la restauration.",
+      });
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const handleDestroyBook = async (bookId: string, title: string) => {
+    if (!confirm(`Détruire définitivement le livre "${title}" ?`)) return;
+
+    setActionLoadingId(bookId);
+    try {
+      await libraryApi.destroyBook(bookId);
+      setNotification({ type: "success", message: `Le livre "${title}" a été détruit définitivement.` });
+      await loadBooks();
+    } catch (err) {
+      setNotification({
+        type: "error",
+        message: err instanceof Error ? err.message : "Erreur lors de la destruction.",
       });
     } finally {
       setActionLoadingId(null);
@@ -192,8 +234,9 @@ export default function Home() {
   };
 
   // Filtered books
+  const visibleBooks = catalogueView === "active" ? books : archivedBooks;
   const filteredBooks = useMemo(() => {
-    return books.filter((book) => {
+    return visibleBooks.filter((book) => {
       const q = searchQuery.toLowerCase().trim();
       const matchesSearch =
         !q ||
@@ -202,12 +245,13 @@ export default function Home() {
         book.isbn.toLowerCase().includes(q) ||
         (book.borrowed_by && book.borrowed_by.toLowerCase().includes(q));
 
-      const matchesStatus =
-        statusFilter === "all" ? true : book.status === statusFilter;
+      const matchesStatus = catalogueView === "archived"
+        ? true
+        : statusFilter === "all" ? true : book.status === statusFilter;
 
       return matchesSearch && matchesStatus;
     });
-  }, [books, searchQuery, statusFilter]);
+  }, [visibleBooks, searchQuery, statusFilter, catalogueView]);
 
   const availableBooks = books.filter((b) => b.status === "available");
   const borrowedBooks = books.filter((b) => b.status === "borrowed");
@@ -455,7 +499,7 @@ export default function Home() {
 
                 <div>
                   <label className="block text-xs font-semibold text-stone-700 mb-1.5">
-                    Nom de l'adhérent <span className="text-stone-400">*</span>
+                    Nom de l&apos;adhérent <span className="text-stone-400">*</span>
                   </label>
                   <input
                     type="text"
@@ -493,7 +537,9 @@ export default function Home() {
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-stone-100">
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-stone-900">Catalogue des livres</h2>
+                <h2 className="text-base font-bold text-stone-900">
+                  {catalogueView === "active" ? "Catalogue des livres" : "Livres archivés"}
+                </h2>
                 <span className="text-xs px-2 py-0.5 rounded-md bg-stone-100 font-mono text-stone-600 border border-stone-200/70">
                   {filteredBooks.length} livre{filteredBooks.length > 1 ? "s" : ""}
                 </span>
@@ -504,8 +550,27 @@ export default function Home() {
             </div>
 
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-              {/* Segmented Filter Pills */}
               <div className="inline-flex rounded-xl bg-stone-100 p-1 border border-stone-200/80">
+                <button
+                  onClick={() => setCatalogueView("active")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                    catalogueView === "active" ? "bg-white text-stone-900 shadow-2xs" : "text-stone-600 hover:text-stone-900"
+                  }`}
+                >
+                  Actifs ({books.length})
+                </button>
+                <button
+                  onClick={() => setCatalogueView("archived")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                    catalogueView === "archived" ? "bg-white text-stone-900 shadow-2xs" : "text-stone-600 hover:text-stone-900"
+                  }`}
+                >
+                  Archives ({archivedBooks.length})
+                </button>
+              </div>
+
+              {/* Segmented Filter Pills */}
+              {catalogueView === "active" && <div className="inline-flex rounded-xl bg-stone-100 p-1 border border-stone-200/80">
                 <button
                   onClick={() => setStatusFilter("all")}
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
@@ -538,10 +603,10 @@ export default function Home() {
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
                   En prêt ({borrowedBooks.length})
                 </button>
-              </div>
+              </div>}
 
               {/* Search Bar */}
-              <div className="relative min-w-[240px]">
+              <div className="relative min-w-60">
                 <input
                   type="text"
                   value={searchQuery}
@@ -611,12 +676,14 @@ export default function Home() {
                           </span>
 
                           <button
-                            onClick={() => handleDeleteBook(book.id, book.title)}
+                            onClick={() => catalogueView === "active"
+                              ? handleDeleteBook(book.id, book.title)
+                              : handleDestroyBook(book.id, book.title)}
                             disabled={isProcessing}
-                            title="Supprimer ce livre"
+                            title={catalogueView === "active" ? "Archiver ce livre" : "Détruire définitivement ce livre"}
                             className="text-stone-300 hover:text-rose-600 p-1.5 rounded-md hover:bg-rose-50 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 cursor-pointer"
                           >
-                            <IconTrash className="w-4 h-4" />
+                            {catalogueView === "active" ? <IconTrash className="w-4 h-4" /> : <IconTrash className="w-4 h-4" />}
                           </button>
                         </div>
 
@@ -666,7 +733,16 @@ export default function Home() {
 
                       {/* Card Footer Actions */}
                       <div className="mt-5 pt-3.5 border-t border-stone-100">
-                        {isAvailable ? (
+                        {catalogueView === "archived" ? (
+                          <button
+                            onClick={() => handleRestoreBook(book.id, book.title)}
+                            disabled={isProcessing}
+                            className="w-full h-9 bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold rounded-xl transition-all disabled:opacity-50 inline-flex items-center justify-center gap-1.5 cursor-pointer"
+                          >
+                            {isProcessing ? <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <IconRefresh className="w-3.5 h-3.5" />}
+                            <span>Restaurer le livre</span>
+                          </button>
+                        ) : isAvailable ? (
                           <button
                             onClick={() => selectBookForBorrow(book.id)}
                             className="w-full h-9 bg-white hover:bg-stone-100 text-stone-800 border border-stone-300 hover:border-stone-400 text-xs font-semibold rounded-xl transition-all inline-flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.99]"

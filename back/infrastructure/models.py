@@ -18,10 +18,11 @@ class BookModel(Base):
     status = Column(String(20), nullable=False, default="available")
     borrowed_by = Column(String(255), nullable=True)
     borrow_date = Column(DateTime, nullable=True)
+    archived_at = Column(DateTime, nullable=True, index=True)
 
     def to_domain(self):
         """Convert SQLAlchemy model to domain entity."""
-        from domain.entities import Book, BookStatus
+        from domain.entities.Book import Book, BookStatus
         return Book(
             id=self.id,
             title=self.title,
@@ -30,6 +31,7 @@ class BookModel(Base):
             status=BookStatus(self.status),
             borrowed_by=self.borrowed_by,
             borrow_date=self.borrow_date,
+            archived_at=self.archived_at,
         )
 
     @staticmethod
@@ -43,4 +45,5 @@ class BookModel(Base):
             status=book.status.value,
             borrowed_by=book.borrowed_by,
             borrow_date=book.borrow_date,
+            archived_at=book.archived_at,
         )

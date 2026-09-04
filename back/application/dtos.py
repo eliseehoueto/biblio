@@ -1,5 +1,6 @@
 """DTOs (Data Transfer Objects) for application layer."""
 from dataclasses import dataclass
+from datetime import datetime
 from uuid import UUID
 
 
@@ -34,3 +35,4 @@ class BookDTO:
     status: str
     borrowed_by: str | None
     borrow_date: str | None
+    archived_at: datetime | None = None
